@@ -1,0 +1,26 @@
+#!/bin/bash
+
+sudo apt-get update
+sudo apt --fix-broken install -y
+sudo apt-get update
+
+# swap off
+sudo swapon --show
+sudo free -h
+sudo swapoff -a
+sudo rm -f /swap.img
+checkval="/swap.img"
+sudo sed -i 's/\/swap.img/\# \/swap.img/g' /etc/fstab
+sudo swapon --show
+
+# airuntime 계정 no passwd
+echo -e "\nairuntime\tALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# docker 설치
+sudo apt-get update
+sudo apt-get remove docker docker-engine docker.io
+sudo apt-get install docker.io apt-transport-https gnupg-agent -y
+sudo adduser `id -un` docker
+
+# install k9s, minikube, kubectl, istioctl
+sudo install /mnt/usb/song/bin/* /usr/local/bin/
