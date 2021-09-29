@@ -3,7 +3,7 @@
 # network driver
 sudo dpkg -i /mnt/usb/medical-insight/1.network-driver/deb_files/*.deb
 sudo sh /mnt/usb/medical-insight/1.network-driver/r8125-9.005.06/autorun.sh
-device_name = 'ip addr | grep "2:" | awk '{print $2}''
+device_name=$(ip addr | grep "2: enp" | awk '{print $2}')
 echo -e "network: \
 \n  version: 2 \
 \n  ethernets: \
