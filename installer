@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# airuntime 계정 no passwd
+sudo echo -e "\nairuntime\tALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
 # network driver
 sudo dpkg -i /mnt/usb/medical-insight/1.network-driver/deb_files/*.deb
 sudo sh /mnt/usb/medical-insight/1.network-driver/r8125-9.005.06/autorun.sh
@@ -22,12 +25,13 @@ echo -e "network: \
 sudo netplan apply
 ip addr
 
-
-
 # 의존성 문제 해결 : RTL8125 네트워크 드라이브 설치시 강제로 deb 파일들을 설치하여 조치함.
 sudo apt-get update
 sudo apt --fix-broken install -y
 sudo apt-get update
+
+# time zone
+sudo ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 
 # swap off
 sudo swapon --show
@@ -38,9 +42,6 @@ checkval="/swap.img"
 sudo sed -i 's/\/swap.img/\# \/swap.img/g' /etc/fstab
 sudo swapon --show
 
-# airuntime 계정 no passwd
-sudo echo -e "\nairuntime\tALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
 # docker
 sudo apt-get update
 sudo apt-get remove docker docker-engine docker.io
@@ -48,4 +49,70 @@ sudo apt-get install docker.io apt-transport-https gnupg-agent -y
 sudo adduser `id -un` docker
 
 # install k9s, minikube, kubectl, istioctl
-sudo install /mnt/usb/medical-insight/kubernetes/* /usr/local/bin/
+sudo chown airuntime:airuntime /mnt/usb/medical-insight/kubernetes/bin/*
+sudo chmod +x /mnt/usb/medical-insight/kubernetes/bin/*
+sudo install /mnt/usb/medical-insight/kubernetes/bin/* /usr/local/bin/
+
+minikube start --kubernetes-version=v1.18.17 --driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost && \
+minikube status
+
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
+istioctl install -y
+
+
+# java
+# install the necessary dependencies
+sudo apt-get -q update
+sudo apt-get -yq install gnupg curl -y
+
+# add Azul's public key
+sudo apt-key adv \
+  --keyserver hkp://keyserver.ubuntu.com:80 \
+  --recv-keys 0xB1998361219BD9C9
+
+# download and install the package that adds 
+# the Azul APT repository to the list of sources 
+curl -O https://cdn.azul.com/zulu/bin/zulu-repo_1.0.0-2_all.deb
+
+# install the package
+sudo apt-get install ./zulu-repo_1.0.0-2_all.deb
+
+# update the package sources
+sudo apt-get update
+
+# install Azul Zulu JDK 11
+sudo apt-get install zulu11-jdk -y
+
+# redis
+sudo apt-get update
+sudo apt-get install redis-server -y
+sudo sed -i 's/\# requirepass foobared/requirepass \!skcc1234/g' /etc/redis/redis.conf
+sudo systemctl restart redis-server
+
+# nginx
+sudo apt-get update
+sudo apt-get install nginx
+sudo cp /mnt/usb/medical-insight/3.aiip-runtime/nginx.conf /etc/nginx/nginx.conf
+
+# install mariadb, data migration
+sudo apt-get update
+sudo apt-get install mariadb-server -y
+cat /mnt/usb/medical-insight/3.aiip-runtime/createDB.sql | sudo mysql -u root
+cat /mnt/usb/medical-insight/3.aiip-runtime/v1_airuntime_20210727_060001.sql | mysql -u airuntime --password='!skcc1234' airuntime
+
+# directory
+sudo mkdir -p /data/pacs/input /data/pacs/output /data/pacs/backup /data/pacs/tmp /data/airuntime/config /data/airuntime/www/predict/history
+sudo chown -R airuntime:airuntime /data
+sudo chmod -R 777 /data
+sudo ln -s /data/pacs /pacs
+sudo ln -s /data/airuntime/www /www
+
+# nfs
+sudo apt-get update
+sudo apt-get install nfs-kernel-server -y
+sudo echo -e "/data/pacs/ *(rw,sync,insecure,no_subtree_check,no_root_squash)" >> /etc/exports
+sudo exportfs -a
+sudo systemctl restart nfs-kernel-server
+
+
+
