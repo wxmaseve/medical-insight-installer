@@ -162,4 +162,4 @@ sudo systemctl start airuntime-history.service
 sudo systemctl start airuntime-core.service
 sudo systemctl start airuntime-ifservice.service
 
-
+# apt-get install python3-pip -y
