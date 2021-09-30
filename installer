@@ -2,6 +2,9 @@
 
 # time zone
 sudo ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+sudo apt-get update
+sudo apt-get install rdate
+sudo rdate -s time.bora.net
 
 # swap off
 sudo swapon --show
@@ -77,7 +80,6 @@ cat /mnt/usb/medical-insight/3.aiip-runtime/v1_airuntime_20210727_060001.sql | m
 # NodePort 타입으로 변경하여 해결.
 kubectl -n istio-system get svc istio-ingressgateway -o yaml | sed "s/type: LoadBalancer/type: NodePort/g" | kubectl replace -f -
 
-
 # create working directory
 sudo mkdir -p /data/pacs/input /data/pacs/output /data/pacs/backup /data/pacs/tmp /data/airuntime/config /data/airuntime/www/predict/history
 sudo chown -R airuntime:airuntime /data
@@ -123,9 +125,25 @@ cp /home/airuntime/aiip-runtime/config/common-stg.yml /data/airuntime/config/
 sudo iptables -t nat -A OUTPUT -o lo -p tcp --dport 443 -j REDIRECT --to-port 8443
 
 
+# knative-serving
+kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/knative-serving/serving-crds.yaml
+kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/knative-serving/serving-core.yaml
+kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/knative-serving/net-certmanager-release.yaml
+kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/knative-serving/net-istio-release.yaml
+
+# kfserving
+kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/kfserving.yaml
+
+# knative와 kfserving 버전 호환 문제로 임시 조치
+kubectl -n kfserving-system get cm inferenceservice-config -o yaml | sed "s/cluster-local-gateway/knative-local-gateway/g" | kubectl replace -f -
+
+sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/nfs-pv.yml
+sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
+kubectl create namespace auto-create-26
+kubectl -n auto-create-26 apply -f /home/airuntime/aiip-runtime/airuntime-watcher/nfs-pv.yml
 
 # setup service deamon
-cp /home/airuntime/aiip-runtime/serviced/* /etc/systemd/system/
+sudo cp /home/airuntime/aiip-runtime/serviced/* /etc/systemd/system/
 sudo systemctl enable airuntime-configserver.service
 sudo systemctl enable airuntime-gateway.service
 sudo systemctl enable airuntime-account.service
@@ -133,6 +151,7 @@ sudo systemctl enable airuntime-monitoring.service
 sudo systemctl enable airuntime-history.service
 sudo systemctl enable airuntime-core.service
 sudo systemctl enable airuntime-ifservice.service
+sudo systemctl enable airuntime-watcher.service
 
 # run
 sudo systemctl start airuntime-configserver.service
