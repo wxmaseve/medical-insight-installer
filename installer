@@ -1,35 +1,5 @@
 #!/bin/bash
 
-# airuntime 계정 no passwd
-sudo echo -e "\nairuntime\tALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
-# network driver
-sudo dpkg -i /mnt/usb/medical-insight/1.network-driver/deb_files/*.deb
-sudo sh /mnt/usb/medical-insight/1.network-driver/r8125-9.005.06/autorun.sh
-
-device_name=$(ip addr | grep "2: enp" | awk '{print $2}')
-ip_addr=192.168.0.214/24
-gw_addr=192.168.0.1
-dns1=168.126.63.1
-dns2=8.8.8.8
-
-echo -e "network: \
-\n  version: 2 \
-\n  ethernets: \
-\n    $device_name \
-\n      addresses: [$ip_addr] \
-\n      gateway4: $gw_addr \
-\n      nameservers: \
-\n        addresses: [$dns1,$dns2] \
-\n      dhcp4: no" > /etc/netplan/00-installer-config.yaml
-sudo netplan apply
-ip addr
-
-# 의존성 문제 해결 : RTL8125 네트워크 드라이브 설치시 강제로 deb 파일들을 설치하여 조치함.
-sudo apt-get update
-sudo apt --fix-broken install -y
-sudo apt-get update
-
 # time zone
 sudo ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 
@@ -86,31 +56,33 @@ sudo apt-get update
 # install Azul Zulu JDK 11
 sudo apt-get install zulu11-jdk -y
 
-# redis
+# install redis
 sudo apt-get update
 sudo apt-get install redis-server -y
 sudo sed -i 's/\# requirepass foobared/requirepass \!skcc1234/g' /etc/redis/redis.conf
 sudo systemctl restart redis-server
 
-# nginx
+# install nginx
 sudo apt-get update
 sudo apt-get install nginx
 sudo cp /mnt/usb/medical-insight/3.aiip-runtime/nginx.conf /etc/nginx/nginx.conf
 
-# install mariadb, data migration
+# install mariadb
 sudo apt-get update
 sudo apt-get install mariadb-server -y
+
+# initial data migration
 cat /mnt/usb/medical-insight/3.aiip-runtime/createDB.sql | sudo mysql -u root
 cat /mnt/usb/medical-insight/3.aiip-runtime/v1_airuntime_20210727_060001.sql | mysql -u airuntime --password='!skcc1234' airuntime
 
-# directory
+# create working directory
 sudo mkdir -p /data/pacs/input /data/pacs/output /data/pacs/backup /data/pacs/tmp /data/airuntime/config /data/airuntime/www/predict/history
 sudo chown -R airuntime:airuntime /data
 sudo chmod -R 777 /data
 sudo ln -s /data/pacs /pacs
 sudo ln -s /data/airuntime/www /www
 
-# nfs
+# setup nfs
 sudo apt-get update
 sudo apt-get install nfs-kernel-server -y
 sudo echo -e "/data/pacs/ *(rw,sync,insecure,no_subtree_check,no_root_squash)" >> /etc/exports
