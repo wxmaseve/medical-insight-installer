@@ -59,6 +59,9 @@ minikube status
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
 istioctl install -y
 
+# minikube로 구성된 K8S에 LoadBalancer 타입으로 서비스를 배포하면, External IP할당이 되지 않는다.
+# NodePort 타입으로 변경하여 해결.
+kubectl -n istio-system get svc istio-ingressgateway -o yaml | sed "s/type: LoadBalancer/type: NodePort/g" | kubectl replace -f -
 
 # java
 # install the necessary dependencies
