@@ -87,8 +87,8 @@ sudo ln -s /data/airuntime/www /www
 # setup nfs
 sudo apt-get update
 sudo apt-get install nfs-kernel-server -y
-#sudo echo -e "/data/pacs/ *(rw,sync,insecure,no_subtree_check,no_root_squash)" >> /etc/exports
-echo -e "/data/pacs/ *(rw,sync,insecure,no_subtree_check,no_root_squash)" | sudo tee -a /etc/exports
+#sudo echo -e "\n/data/pacs/ *(rw,sync,insecure,no_subtree_check,no_root_squash)" >> /etc/exports
+echo -e "\n/data/pacs/ *(rw,sync,insecure,no_subtree_check,no_root_squash)" | sudo tee -a /etc/exports
 sudo exportfs -a
 sudo systemctl restart nfs-kernel-server
 
