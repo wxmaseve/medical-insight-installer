@@ -29,10 +29,6 @@ minikube status
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
 istioctl install -y
 
-# minikube로 구성된 K8S에 LoadBalancer 타입으로 서비스를 배포하면, External IP할당이 되지 않는다.
-# NodePort 타입으로 변경하여 해결.
-kubectl -n istio-system get svc istio-ingressgateway -o yaml | sed "s/type: LoadBalancer/type: NodePort/g" | kubectl replace -f -
-
 # java
 # install the necessary dependencies
 sudo apt-get -q update
@@ -77,6 +73,11 @@ sudo apt-get install mariadb-server -y
 cat /mnt/usb/medical-insight/3.aiip-runtime/createDB.sql | sudo mysql -u root
 cat /mnt/usb/medical-insight/3.aiip-runtime/v1_airuntime_20210727_060001.sql | mysql -u airuntime --password='!skcc1234' airuntime
 
+# minikube로 구성된 K8S에 LoadBalancer 타입으로 서비스를 배포하면, External IP할당이 되지 않는다.
+# NodePort 타입으로 변경하여 해결.
+kubectl -n istio-system get svc istio-ingressgateway -o yaml | sed "s/type: LoadBalancer/type: NodePort/g" | kubectl replace -f -
+
+
 # create working directory
 sudo mkdir -p /data/pacs/input /data/pacs/output /data/pacs/backup /data/pacs/tmp /data/airuntime/config /data/airuntime/www/predict/history
 sudo chown -R airuntime:airuntime /data
@@ -111,5 +112,35 @@ sudo rsync -avz ./dist/* \
   /usr/share/nginx/html/airuntime-web && \
 sudo chown -R www-data:www-data /usr/share/nginx/html/airuntime-web && \
 sudo systemctl restart nginx
+
+
+# setup ingress host, ip
+sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/config/common-stg.yml
+sed -i "s/99999/$(kubectl -n istio-system get svc istio-ingressgateway -o yaml | grep -B 2 'port: 80' | grep 'nodePort' | awk '{print $2}')/g" /home/airuntime/aiip-runtime/config/common-stg.yml
+cp /home/airuntime/aiip-runtime/config/common-stg.yml /data/airuntime/config/
+
+# minikube는 api server 포트가 8443으로 되어 있어서 443 -> 8443 포트포워딩 필요
+sudo iptables -t nat -A OUTPUT -o lo -p tcp --dport 443 -j REDIRECT --to-port 8443
+
+
+
+# setup service deamon
+cp /home/airuntime/aiip-runtime/serviced/* /etc/systemd/system/
+sudo systemctl enable airuntime-configserver.service
+sudo systemctl enable airuntime-gateway.service
+sudo systemctl enable airuntime-account.service
+sudo systemctl enable airuntime-monitoring.service
+sudo systemctl enable airuntime-history.service
+sudo systemctl enable airuntime-core.service
+sudo systemctl enable airuntime-ifservice.service
+
+# run
+sudo systemctl start airuntime-configserver.service
+sudo systemctl start airuntime-gateway.service
+sudo systemctl start airuntime-account.service
+sudo systemctl start airuntime-monitoring.service
+sudo systemctl start airuntime-history.service
+sudo systemctl start airuntime-core.service
+sudo systemctl start airuntime-ifservice.service
 
 
