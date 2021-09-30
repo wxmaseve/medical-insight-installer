@@ -90,4 +90,22 @@ sudo exportfs -a
 sudo systemctl restart nfs-kernel-server
 
 
+# make app home
+mkdir -p /home/airuntime/aiip-runtime
+sudo cp -R /mnt/usb/medical-insight/3.aiip-runtime/* /home/airuntime/aiip-runtime
+sudo chown -R airuntime:airuntime /home/airuntime/aiip-runtime
+
+# web 소스 빌드
+sudo apt-get update
+sudo apt-get install npm -y
+cd /home/airuntime/aiip-runtime/airuntime-web
+npm install
+npm run build
+
+# web 소스 적용
+sudo rsync -avz ./dist/* \
+  /usr/share/nginx/html/airuntime-web && \
+sudo chown -R www-data:www-data /usr/share/nginx/html/airuntime-web && \
+sudo systemctl restart nginx
+
 
