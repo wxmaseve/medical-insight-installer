@@ -102,6 +102,7 @@ sudo chown -R airuntime:airuntime /home/airuntime/aiip-runtime
 sudo apt-get update
 sudo apt-get install npm -y
 cd /home/airuntime/aiip-runtime/airuntime-web
+sed -i "s/gateway/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-web/.env.release
 npm install
 npm run build
 
