@@ -111,7 +111,7 @@ sudo chown -R airuntime:airuntime /home/airuntime/aiip-runtime
 
 # web 소스 빌드
 sudo apt-get update
-sudo apt-get install npm -y
+sudo apt-get install npm jq -y
 cd /home/airuntime/aiip-runtime/airuntime-web
 sed -i "s/gateway/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-web/.env.release
 npm install
@@ -169,10 +169,21 @@ sudo systemctl start airuntime-history.service
 sudo systemctl start airuntime-core.service
 sudo systemctl start airuntime-ifservice.service
 
-# ai model deploy
+# deploy
+# 연동 중지
 sudo systemctl stop airuntime-watcher.service
+
+# 모델 삭제
+inferenceId = $(cat /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf | grep 'inferenceId' | awk '{print $3}')
+curl --location --request DELETE "http://172.20.182.183:17000/api/core/models/$inferenceId?account_id=26" \
+--header 'Content-Type: application/json' \
+--header 'Authorization: 27b3a541-37f5-44dd-9f9b-c1380e33319b'
+
+# 기존 정보 삭제
 sed -i '/inferenceId/d' /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
 
+# 모델 배포
+echo "inferenceId = $( \
 curl --location --request POST 'http://172.20.182.183:17000/api/core/models/deployment?account_id=26&account_id=26' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: 27b3a541-37f5-44dd-9f9b-c1380e33319b' \
@@ -207,7 +218,7 @@ curl --location --request POST 'http://172.20.182.183:17000/api/core/models/depl
       }
     }
   }
-}' | echo "\ninferenceId = $(jq '.data.service_id')" >> /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
+}' | jq '.data.service_id')" >> /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
 
 sleep 5m # Waits 5 minutes.
 
