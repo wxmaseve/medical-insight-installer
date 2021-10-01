@@ -35,8 +35,7 @@ usb
   |-- network-driver
 ```
 
-mount cmd
-device 이름 확인
+## device 이름 확인
 ```
 $ sudo fdisk -l
 
@@ -44,7 +43,7 @@ Device       Start       End   Sectors  Size Type
 /dev/sda1   411648 250626047 250214400 31.8G Linux filesystem
 ```
 
-
+## mount cmd
 ```
 $ sudo mkdir -p /mnt/usb
 $ sudo mount -t ntfs-3g /dev/*** /mnt/usb
