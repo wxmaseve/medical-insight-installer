@@ -3,6 +3,8 @@
 ## 설치 usb 구성
 ```
 usb
+  |-- Ubuntu-Server 20.04.2 LTS amd64 설치 파일
+  |
   |-- medical-insight   
   |   |-- 1.network-driver
   |       |-- deb_files
