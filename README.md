@@ -17,6 +17,8 @@ usb
   |       |-- kfserving
   |   |-- 3.aiip-runtime
   |       |-- airuntime-account
+  |           |-- bin
+  |           |-- logs
   |       |-- airuntime-config-server
   |       |-- airuntime-core
   |       |-- airuntime-gw
@@ -24,7 +26,7 @@ usb
   |       |-- airuntime-ifservice
   |       |-- airuntime-monitoring : 생략 가능
   |       |-- airuntime-watcher
-  |       |-- airuntime-web
+  |       |-- airuntime-web : 생략 가능
   |       |-- config : 환경 변수 정의
   |       |-- serviced : 서비스 데몬 등록 파일
   |       |-- nginx.conf : nginx 설정 파일
@@ -32,9 +34,9 @@ usb
   |       |-- v1_airuntime_20210727_060001 : 초기 데이터 마이그레이션 스크립트
   |   |-- 4.test
   |       |-- 1.2.410.2000010.82.220.12100424023 : test sample data
-  |-- installer
-  |-- init
-  |-- network-driver
+  |-- installer : 설치 스크립트
+  |-- init : no passwd 설정
+  |-- network-driver : network 드라이버
 ```
 
 ## device 이름 확인
