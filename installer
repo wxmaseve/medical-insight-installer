@@ -28,9 +28,9 @@ sudo apt-get install docker.io apt-transport-https gnupg-agent conntrack -y
 sudo adduser `id -un` docker
 
 # install k9s, minikube, kubectl, istioctl
-sudo chown airuntime:airuntime /mnt/usb/medical-insight/kubernetes/bin/*
-sudo chmod +x /mnt/usb/medical-insight/kubernetes/bin/*
-sudo install /mnt/usb/medical-insight/kubernetes/bin/* /usr/local/bin/
+sudo chown airuntime:airuntime /mnt/usb/medical-insight/2.kubernetes/bin/*
+sudo chmod +x /mnt/usb/medical-insight/2.kubernetes/bin/*
+sudo install /mnt/usb/medical-insight/2.kubernetes/bin/* /usr/local/bin/
 
 # minikube 시작
 minikube start --kubernetes-version=v1.18.17 --driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost && \
@@ -231,5 +231,9 @@ sleep 5m # Waits 5 minutes.
 # sudo pip install watchdog
 # sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
 # sudo systemctl start airuntime-watcher.service
+
+# TEST
+# sudo cp /mnt/usb/medical-insight/4.test/1.2.410.2000010.82.220.12100424023 /data/pacs/input/
+# sudo mv /data/pacs/input/1.2.410.2000010.82.220.12100424023 /data/pacs/input/RQ1.2.410.2000010.82.220.12100424023
 # tail -f /home/airuntime/aiip-runtime/airuntime-watcher/logs/airuntime-watcher.log
 
