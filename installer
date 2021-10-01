@@ -72,9 +72,9 @@ sudo sed -i 's/\# requirepass foobared/requirepass \!skcc1234/g' /etc/redis/redi
 sudo systemctl restart redis-server
 
 # install nginx
-sudo apt-get update
-sudo apt-get install nginx -y
-sudo cp /mnt/usb/medical-insight/3.aiip-runtime/nginx.conf /etc/nginx/nginx.conf
+#sudo apt-get update
+#sudo apt-get install nginx -y
+#sudo cp /mnt/usb/medical-insight/3.aiip-runtime/nginx.conf /etc/nginx/nginx.conf
 
 # install mariadb
 sudo apt-get update
@@ -110,18 +110,18 @@ sudo cp -R /mnt/usb/medical-insight/3.aiip-runtime/* /home/airuntime/aiip-runtim
 sudo chown -R airuntime:airuntime /home/airuntime/aiip-runtime
 
 # web 소스 빌드
-sudo apt-get update
-sudo apt-get install npm jq python3-pip -y
-cd /home/airuntime/aiip-runtime/airuntime-web
-sed -i "s/gateway/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-web/.env.release
-npm install
-npm run build
+#sudo apt-get update
+#sudo apt-get install npm -y
+#cd /home/airuntime/aiip-runtime/airuntime-web
+#sed -i "s/gateway/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-web/.env.release
+#npm install
+#npm run build
 
 # web 소스 적용
-sudo rsync -avz ./dist/* \
-  /usr/share/nginx/html/airuntime-web && \
-sudo chown -R www-data:www-data /usr/share/nginx/html/airuntime-web && \
-sudo systemctl restart nginx
+#sudo rsync -avz ./dist/* \
+#  /usr/share/nginx/html/airuntime-web && \
+#sudo chown -R www-data:www-data /usr/share/nginx/html/airuntime-web && \
+#sudo systemctl restart nginx
 
 
 # setup ingress host, ip
@@ -154,20 +154,23 @@ sudo cp /home/airuntime/aiip-runtime/serviced/* /etc/systemd/system/
 sudo systemctl enable airuntime-configserver.service
 sudo systemctl enable airuntime-gateway.service
 sudo systemctl enable airuntime-account.service
-sudo systemctl enable airuntime-monitoring.service
-sudo systemctl enable airuntime-history.service
+#sudo systemctl enable airuntime-monitoring.service
+#sudo systemctl enable airuntime-history.service
 sudo systemctl enable airuntime-core.service
 sudo systemctl enable airuntime-ifservice.service
 sudo systemctl enable airuntime-watcher.service
 
-# run
+# backend svc run
 sudo systemctl start airuntime-configserver.service
 sudo systemctl start airuntime-gateway.service
 sudo systemctl start airuntime-account.service
-sudo systemctl start airuntime-monitoring.service
-sudo systemctl start airuntime-history.service
+#sudo systemctl start airuntime-monitoring.service
+#sudo systemctl start airuntime-history.service
 sudo systemctl start airuntime-core.service
 sudo systemctl start airuntime-ifservice.service
+
+sudo apt-get update
+sudo apt-get install jq python3-pip -y
 
 # deploy
 # 연동 중지
