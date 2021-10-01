@@ -253,7 +253,7 @@ curl --location --request DELETE "http://$ip_addr:17000/api/auth/cancellationTok
 --header 'Content-Type: application/json' \
 --header "Authorization: $token"
 
-echo "sleep 5m"
+echo "sleep 10m"
 sleep 10m # Waits 5 minutes.
 
 # interface
