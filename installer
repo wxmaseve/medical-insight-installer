@@ -33,8 +33,8 @@ sudo chmod +x /mnt/usb/medical-insight/2.kubernetes/bin/*
 sudo install /mnt/usb/medical-insight/2.kubernetes/bin/* /usr/local/bin/
 
 # minikube 시작
-minikube start --kubernetes-version=v1.18.17 --driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost && \
-minikube status
+sudo minikube start --kubernetes-version=v1.18.17 --driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost && \
+sudo minikube status
 
 # cert mgr, istio
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
