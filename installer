@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# stdin pw
+echo '!skcc1234' | sudo -S ./init
+
+# network driver
+#. ./network driver
+
 # time zone
 sudo ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 sudo apt-get update
@@ -26,9 +32,11 @@ sudo chown airuntime:airuntime /mnt/usb/medical-insight/kubernetes/bin/*
 sudo chmod +x /mnt/usb/medical-insight/kubernetes/bin/*
 sudo install /mnt/usb/medical-insight/kubernetes/bin/* /usr/local/bin/
 
+# minikube 시작
 minikube start --kubernetes-version=v1.18.17 --driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost && \
 minikube status
 
+# cert mgr, istio
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
 istioctl install -y
 
@@ -138,7 +146,6 @@ kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/kfserving.yaml
 kubectl -n kfserving-system get cm inferenceservice-config -o yaml | sed "s/cluster-local-gateway/knative-local-gateway/g" | kubectl replace -f -
 
 sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/nfs-pv.yml
-sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
 kubectl create namespace auto-create-26
 kubectl -n auto-create-26 apply -f /home/airuntime/aiip-runtime/airuntime-watcher/nfs-pv.yml
 
@@ -162,4 +169,50 @@ sudo systemctl start airuntime-history.service
 sudo systemctl start airuntime-core.service
 sudo systemctl start airuntime-ifservice.service
 
+# ai model deploy
+sudo systemctl stop airuntime-watcher.service
+sed -i '/inferenceId/d' /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
+
+curl --location --request POST 'http://172.20.182.183:17000/api/core/models/deployment?account_id=26&account_id=26' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: 27b3a541-37f5-44dd-9f9b-c1380e33319b' \
+--data-raw '{
+  "account_id": 26,
+  "description": "Brain Hemorrhage Detection Solution, SKH-BCH-001, v 2.0.0",
+  "metadata": {
+    "name": "skh-bch-001",
+    "k8s_ns_nm": "auto-create-26",
+    "concurrent": 1
+  },
+  "predictor": {
+    "type": "custom",
+    "minReplicas": 1,
+    "maxReplicas": 1,
+    "custom": {
+      "container": {
+        "image": "wxmaseve/nvidia-hm:0.0.1.knuh-triage",
+        "resources": {
+          "limits": {
+            "cpu": 2,
+            "memory": 4,
+            "gpu": 0
+          },
+          "requests": {
+            "cpu": 2,
+            "memory": 4,
+            "gpu": 0
+          }
+        },
+        "optional_json": "{\n    \"env\": [{\n            \"name\": \"STORAGE_URI\",\n            \"value\": \"pvc://on-nfs-pvc\"\n        },\n        {\n            \"name\": \"MODEL_NAME\",\n            \"value\": \"skh-bch-001\"\n        }\n    ],\n    \"args\": [\n        \"--model_name=$(MODEL_NAME)\"\n    ]\n}"
+      }
+    }
+  }
+}' | echo "\ninferenceId = $(jq '.data.service_id')" >> /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
+
+sleep 5m # Waits 5 minutes.
+
+
+# interface
 # apt-get install python3-pip -y
+# sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
+
