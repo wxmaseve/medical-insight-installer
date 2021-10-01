@@ -5,7 +5,7 @@
 usb
   |-- Ubuntu-Server 20.04.2 LTS amd64 설치 파일
   |
-  |-- medical-insight   
+  |-- medical-insight
   |   |-- 1.network-driver
   |       |-- deb_files
   |       |-- r8125-9.005.06
@@ -47,4 +47,10 @@ Device       Start       End   Sectors  Size Type
 ```
 $ sudo mkdir -p /mnt/usb
 $ sudo mount -t ntfs-3g /dev/*** /mnt/usb
+```
+
+## 설치
+```
+$ cd /mnt/usb/medical-insight
+$ . installer
 ```
