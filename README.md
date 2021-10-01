@@ -48,7 +48,7 @@ Device       Start       End   Sectors  Size Type
 ## mount cmd
 ```
 $ sudo mkdir -p /mnt/usb
-$ sudo mount -t ntfs-3g /dev/*** /mnt/usb
+$ sudo mount -t ntfs-3g /dev/sda1 /mnt/usb
 ```
 
 ## 설치
