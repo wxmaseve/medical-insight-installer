@@ -215,4 +215,6 @@ sleep 5m # Waits 5 minutes.
 # interface
 # apt-get install python3-pip -y
 # sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
+# sudo systemctl start airuntime-watcher.service
+# tail -f /home/airuntime/aiip-runtime/airuntime-watcher/logs/airuntime-watcher.log
 
