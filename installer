@@ -9,7 +9,7 @@ echo '!skcc1234' | sudo -S ./init
 # time zone
 sudo ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 sudo apt-get update
-sudo apt-get install rdate
+sudo apt-get install rdate -y
 sudo rdate -s time.bora.net
 
 # swap off
@@ -23,22 +23,31 @@ sudo swapon --show
 
 # docker
 sudo apt-get update
-sudo apt-get remove docker docker-engine docker.io
 sudo apt-get install docker.io apt-transport-https gnupg-agent conntrack -y
 sudo adduser `id -un` docker
+sudo chmod 777 /var/run/docker.sock
 
 # install k9s, minikube, kubectl, istioctl
-sudo chown airuntime:airuntime /mnt/usb/medical-insight/2.kubernetes/bin/*
-sudo chmod +x /mnt/usb/medical-insight/2.kubernetes/bin/*
-sudo install /mnt/usb/medical-insight/2.kubernetes/bin/* /usr/local/bin/
+mkdir -p /home/airuntime/tmp_bin
+sudo cp /mnt/usb/medical-insight/2.kubernetes/bin/* /home/airuntime/tmp_bin/
+sudo chown airuntime:airuntime /home/airuntime/tmp_bin/*
+sudo chmod +x /home/airuntime/tmp_bin/*
+sudo install /home/airuntime/tmp_bin/* /usr/local/bin/
 
 # minikube 시작
-sudo minikube start --kubernetes-version=v1.18.17 --driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost && \
-sudo minikube status
+cd ~
+minikube start --kubernetes-version=v1.18.17 --driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost && \
+minikube status
+
+echo "sleep 1m"
+sleep 1m
 
 # cert mgr, istio
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
 istioctl install -y
+
+echo "sleep 30s"
+sleep 30s
 
 # java
 # install the necessary dependencies
@@ -139,8 +148,14 @@ kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/knative-serving/serving-c
 kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/knative-serving/net-certmanager-release.yaml
 kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/knative-serving/net-istio-release.yaml
 
+echo "sleep 30s"
+sleep 30s
+
 # kfserving
 kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/kfserving.yaml
+
+echo "sleep 30s"
+sleep 30s
 
 # knative와 kfserving 버전 호환 문제로 임시 조치
 kubectl -n kfserving-system get cm inferenceservice-config -o yaml | sed "s/cluster-local-gateway/knative-local-gateway/g" | kubectl replace -f -
@@ -148,6 +163,9 @@ kubectl -n kfserving-system get cm inferenceservice-config -o yaml | sed "s/clus
 sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/nfs-pv.yml
 kubectl create namespace auto-create-26
 kubectl -n auto-create-26 apply -f /home/airuntime/aiip-runtime/airuntime-watcher/nfs-pv.yml
+
+echo "sleep 30s"
+sleep 30s
 
 # setup service deamon
 sudo cp /home/airuntime/aiip-runtime/serviced/* /etc/systemd/system/
@@ -177,19 +195,26 @@ sudo apt-get install jq python3-pip -y
 sudo systemctl stop airuntime-watcher.service
 
 # 모델 삭제
-inferenceId = $(cat /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf | grep 'inferenceId' | awk '{print $3}')
-curl --location --request DELETE "http://172.20.182.183:17000/api/core/models/$inferenceId?account_id=26" \
+inferenceId=$(cat /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf | grep 'inferenceId' | awk '{print $3}')
+ip_addr=$(hostname -I | awk '{print $1}')
+token=$(curl --location --request POST "http://$ip_addr:17000/api/auth/issueToken" \
 --header 'Content-Type: application/json' \
---header 'Authorization: 27b3a541-37f5-44dd-9f9b-c1380e33319b'
+--data-raw '{
+    "accessKey": "04f23bfa-80e0-4da9-a0e1-19e75ac87e48" 
+}' | jq '.token' | sed 's/"//g')
+
+curl --location --request DELETE "http://$ip_addr:17000/api/core/models/$inferenceId?account_id=26" \
+--header 'Content-Type: application/json' \
+--header "Authorization: $token"
 
 # 기존 정보 삭제
 sed -i '/inferenceId/d' /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
 
 # 모델 배포
 echo "inferenceId = $( \
-curl --location --request POST 'http://172.20.182.183:17000/api/core/models/deployment?account_id=26&account_id=26' \
+curl --location --request POST "http://$ip_addr:17000/api/core/models/deployment?account_id=26&account_id=26" \
 --header 'Content-Type: application/json' \
---header 'Authorization: 27b3a541-37f5-44dd-9f9b-c1380e33319b' \
+--header "Authorization: $token" \
 --data-raw '{
   "account_id": 26,
   "description": "Brain Hemorrhage Detection Solution, SKH-BCH-001, v 2.0.0",
@@ -221,22 +246,28 @@ curl --location --request POST 'http://172.20.182.183:17000/api/core/models/depl
       }
     }
   }
-}' | jq '.data.service_id')" >> /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
+}' | jq '.data.service_id' | sed 's/"//g')" >> /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
 
-sed -i 's/"//g' /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
 
-sleep 5m # Waits 5 minutes.
+curl --location --request DELETE "http://$ip_addr:17000/api/auth/cancellationToken" \
+--header 'Content-Type: application/json' \
+--header "Authorization: $token"
 
+echo "sleep 5m"
+sleep 10m # Waits 5 minutes.
 
 # interface
-# sudo apt-get update
-# sudo apt-get install python3-pip -y
-# sudo pip install watchdog
-# sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
-# sudo systemctl start airuntime-watcher.service
+sudo apt-get update
+sudo apt-get install python3-pip -y
+sudo pip install watchdog
+sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
+sudo systemctl start airuntime-watcher.service
+
+echo "sleep 30s"
+sleep 30s
 
 # TEST
-# sudo cp /mnt/usb/medical-insight/4.test/1.2.410.2000010.82.220.12100424023 /data/pacs/input/
-# sudo mv /data/pacs/input/1.2.410.2000010.82.220.12100424023 /data/pacs/input/RQ1.2.410.2000010.82.220.12100424023
-# tail -f /home/airuntime/aiip-runtime/airuntime-watcher/logs/airuntime-watcher.log
+sudo cp -R /mnt/usb/medical-insight/4.test/1.2.410.2000010.82.220.12100424023 /data/pacs/input/
+sudo mv /data/pacs/input/1.2.410.2000010.82.220.12100424023 /data/pacs/input/RQ1.2.410.2000010.82.220.12100424023
+tail -f /home/airuntime/aiip-runtime/airuntime-watcher/logs/airuntime-watcher.log
 
