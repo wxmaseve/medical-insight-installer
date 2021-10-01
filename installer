@@ -220,6 +220,8 @@ curl --location --request POST 'http://172.20.182.183:17000/api/core/models/depl
   }
 }' | jq '.data.service_id')" >> /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
 
+sed -i 's/"//g' /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
+
 sleep 5m # Waits 5 minutes.
 
 
