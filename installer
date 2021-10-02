@@ -6,11 +6,17 @@ echo '!skcc1234' | sudo -S ./init
 # network driver
 #. ./network driver
 
-# time zone
+# Timezone setup
 sudo ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 sudo apt-get update
 sudo apt-get install rdate -y
 sudo rdate -s time.bora.net
+
+echo "========================================================================================================"
+echo "Timezone setup completed."
+echo "========================================================================================================"
+date
+sleep 3s
 
 # swap off
 sudo swapon --show
@@ -27,6 +33,12 @@ sudo apt-get install docker.io apt-transport-https gnupg-agent conntrack -y
 sudo adduser `id -un` docker
 sudo chmod 777 /var/run/docker.sock
 
+echo "========================================================================================================"
+echo "docker installed."
+echo "========================================================================================================"
+docker version
+sleep 3s
+
 # install k9s, minikube, kubectl, istioctl
 mkdir -p /home/airuntime/tmp_bin
 sudo cp /mnt/usb/medical-insight/2.kubernetes/bin/* /home/airuntime/tmp_bin/
@@ -39,15 +51,25 @@ cd ~
 minikube start --kubernetes-version=v1.18.17 --driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost && \
 minikube status
 
-echo "sleep 1m"
-sleep 1m
+echo "========================================================================================================"
+echo "Creating minikube cluster. it takes 1 min."
+echo "========================================================================================================"
+for x in {1..60} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s60 -w 80 > /dev/null
 
 # cert mgr, istio
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
 istioctl install -y
 
-echo "sleep 30s"
-sleep 30s
+echo "========================================================================================================"
+echo "Deploying Cert-manager & Istio. it takes 30s."
+echo "========================================================================================================"
+for x in {1..30} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s30 -w 80 > /dev/null
 
 # java
 # install the necessary dependencies
@@ -72,13 +94,23 @@ sudo apt-get update
 # install Azul Zulu JDK 11
 sudo apt-get install zulu11-jdk -y
 
+echo "========================================================================================================"
+echo "java installed."
+echo "========================================================================================================"
 java -version
+sleep 3s
 
 # install redis
 sudo apt-get update
 sudo apt-get install redis-server -y
 sudo sed -i 's/\# requirepass foobared/requirepass \!skcc1234/g' /etc/redis/redis.conf
 sudo systemctl restart redis-server
+
+echo "========================================================================================================"
+echo "redis installed."
+echo "========================================================================================================"
+redis-cli --version
+sleep 3s
 
 # install nginx
 #sudo apt-get update
@@ -93,9 +125,23 @@ sudo apt-get install mariadb-server -y
 cat /mnt/usb/medical-insight/3.aiip-runtime/createDB.sql | sudo mysql -u root
 cat /mnt/usb/medical-insight/3.aiip-runtime/v1_airuntime_20210727_060001.sql | mysql -u airuntime --password='!skcc1234' airuntime
 
+echo "========================================================================================================"
+echo "MariaDB installed."
+echo "========================================================================================================"
+mysql --version
+sleep 3s
+
 # minikube로 구성된 K8S에 LoadBalancer 타입으로 서비스를 배포하면, External IP할당이 되지 않는다.
 # NodePort 타입으로 변경하여 해결.
+echo "========================================================================================================"
+echo "type of istio-ingressgateway changed."
+echo "========================================================================================================"
+kubectl -n istio-system get svc istio-ingressgateway
 kubectl -n istio-system get svc istio-ingressgateway -o yaml | sed "s/type: LoadBalancer/type: NodePort/g" | kubectl replace -f -
+echo "--------------------------------------------------------------------------------------------------------"
+kubectl -n istio-system get svc istio-ingressgateway
+echo "========================================================================================================"
+sleep 3s
 
 # create working directory
 sudo mkdir -p /data/pacs/input /data/pacs/output /data/pacs/backup /data/pacs/tmp /data/airuntime/config /data/airuntime/www/predict/history
@@ -111,7 +157,11 @@ sudo apt-get install nfs-kernel-server -y
 echo -e "\n/data/pacs/ *(rw,sync,insecure,no_subtree_check,no_root_squash)" | sudo tee -a /etc/exports
 sudo exportfs -a
 sudo systemctl restart nfs-kernel-server
-
+echo "========================================================================================================"
+echo "NFS setup completed."
+echo "========================================================================================================"
+sudo systemctl status nfs-kernel-server
+sleep 3s
 
 # make app home
 mkdir -p /home/airuntime/aiip-runtime
@@ -148,14 +198,24 @@ kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/knative-serving/serving-c
 kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/knative-serving/net-certmanager-release.yaml
 kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/knative-serving/net-istio-release.yaml
 
-echo "sleep 30s"
-sleep 30s
+echo "========================================================================================================"
+echo "Deploying knative-serving. it takes 30s."
+echo "========================================================================================================"
+for x in {1..30} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s30 -w 80 > /dev/null
 
 # kfserving
 kubectl apply -f /mnt/usb/medical-insight/2.kubernetes/kfserving.yaml
 
-echo "sleep 30s"
-sleep 30s
+echo "========================================================================================================"
+echo "Deploying kfserving. it takes 30s."
+echo "========================================================================================================"
+for x in {1..30} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s30 -w 80 > /dev/null
 
 # knative와 kfserving 버전 호환 문제로 임시 조치
 kubectl -n kfserving-system get cm inferenceservice-config -o yaml | sed "s/cluster-local-gateway/knative-local-gateway/g" | kubectl replace -f -
@@ -164,8 +224,13 @@ sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip
 kubectl create namespace auto-create-26
 kubectl -n auto-create-26 apply -f /home/airuntime/aiip-runtime/airuntime-watcher/nfs-pv.yml
 
-echo "sleep 30s"
-sleep 30s
+echo "========================================================================================================"
+echo "Creating pv. it takes 10s."
+echo "========================================================================================================"
+for x in {1..10} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s10 -w 80 > /dev/null
 
 # setup service deamon
 sudo cp /home/airuntime/aiip-runtime/serviced/* /etc/systemd/system/
@@ -187,6 +252,12 @@ sudo systemctl start airuntime-account.service
 sudo systemctl start airuntime-core.service
 sudo systemctl start airuntime-ifservice.service
 
+echo "========================================================================================================"
+echo "AI Runtime Backend Servives are running."
+echo "========================================================================================================"
+ps -ef | grep "java -jar"
+sleep 3s
+
 sudo apt-get update
 sudo apt-get install jq python3-pip -y
 
@@ -202,6 +273,8 @@ token=$(curl --location --request POST "http://$ip_addr:17000/api/auth/issueToke
 --data-raw '{
     "accessKey": "04f23bfa-80e0-4da9-a0e1-19e75ac87e48" 
 }' | jq '.token' | sed 's/"//g')
+
+sleep 3s
 
 curl --location --request DELETE "http://$ip_addr:17000/api/core/models/$inferenceId?account_id=26" \
 --header 'Content-Type: application/json' \
@@ -253,8 +326,14 @@ curl --location --request DELETE "http://$ip_addr:17000/api/auth/cancellationTok
 --header 'Content-Type: application/json' \
 --header "Authorization: $token"
 
-echo "sleep 10m"
-sleep 10m # Waits 5 minutes.
+echo "========================================================================================================"
+echo "Deploying AI Model(Brain Hemorrhage Detection Solution). it takes 10m."
+echo "========================================================================================================"
+for x in {1..600} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s600 -w 80 > /dev/null
+
 
 # interface
 sudo apt-get update
@@ -263,8 +342,15 @@ sudo pip install watchdog
 sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /home/airuntime/aiip-runtime/airuntime-watcher/src/watcher.conf
 sudo systemctl start airuntime-watcher.service
 
-echo "sleep 30s"
-sleep 30s
+echo "========================================================================================================"
+echo "AI Runtime Watcher(Interface Module) is running."
+echo "--------------------------------------------------------------------------------------------------------"
+ps -ef | grep "main.py"
+sleep 3s
+
+echo "Preparing Sample-Test..."
+echo "========================================================================================================"
+sleep 5s
 
 # TEST
 sudo cp -R /mnt/usb/medical-insight/4.test/1.2.410.2000010.82.220.12100424023 /data/pacs/input/
