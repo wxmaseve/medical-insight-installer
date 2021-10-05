@@ -1,6 +1,7 @@
 # medical-insight-installer
 
 ##### 현장 설치를 위해 USB 파일 기반으로 명령어를 나열한 임시 설치 스크립트
+##### 대략 20분 소요
 
 ## 설치 usb 구성
 ```
@@ -8,14 +9,18 @@ usb
   |-- Ubuntu-Server 20.04.2 LTS amd64 설치 파일
   |
   |-- medical-insight
-  |   |-- 1.network-driver
+  |   |-- install : 설치 스크립트
+  |       |-- install
+  |       |-- restart_k8s
+  |       |-- restart_model
+  |   |-- network-driver
   |       |-- deb_files
   |       |-- r8125-9.005.06
-  |   |-- 2.kubernetes
+  |   |-- kubernetes
   |       |-- bin
   |       |-- knative-serving
   |       |-- kfserving
-  |   |-- 3.aiip-runtime
+  |   |-- aiip-runtime
   |       |-- airuntime-account
   |           |-- bin
   |           |-- logs
@@ -32,14 +37,14 @@ usb
   |       |-- nginx.conf : nginx 설정 파일
   |       |-- createDB : DB 생성 스크립트
   |       |-- v1_airuntime_20210727_060001 : 초기 데이터 마이그레이션 스크립트
-  |   |-- 4.test
+  |   |-- test
   |       |-- 1.2.410.2000010.82.220.12100424023 : test sample data
-  |-- installer : 설치 스크립트
-  |-- init : no passwd 설정
-  |-- network-driver : network 드라이버
+  |   |-- medical-insight : 실행
 ```
 
-## device 이름 확인
+## 설치
+
+##### 1. usb device 이름 확인
 ```
 $ sudo fdisk -l
 
@@ -47,14 +52,38 @@ Device       Start       End   Sectors  Size Type
 /dev/sda1   411648 250626047 250214400 31.8G Linux filesystem
 ```
 
-## mount cmd
+##### 2. USB 마운트
 ```
 $ sudo mkdir -p /mnt/usb
 $ sudo mount -t ntfs-3g /dev/sda1 /mnt/usb
 ```
 
-## 설치
+##### 3. 고정IP 설정
+#####   : 고객사에서 제공하는 사전 발급된 IP 주소 편집
+```
+$ vi /mnt/usb/medical-insight/install/network-driver
+```
+
+##### 4. 설치 스크립트 실행
 ```
 $ cd /mnt/usb/medical-insight
-$ . installer
+$ ./medical-insight install
 ```
+
+## 장비 재부팅, K8S 장애 상황시 클러스터 재생성
+```
+$ cd ~
+$ ./medical-insight restart-k8s
+```
+
+## 모델 재배포
+```
+$ cd ~
+$ ./medical-insight restart-model
+```
+
+## 설치 테스트
+##### VM 환경 : Hyper-V on Windows 11 Pro
+##### OS : Ubuntu-Server 20.04.3 LTS amd64
+##### Device : mount CIFS Windows Share in Linux
+
