@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# root 계정에서 실행
+# airuntime 계정 no passwd
+echo -e "\nairuntime\tALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers

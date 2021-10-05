@@ -1,0 +1,24 @@
+#!/bin/bash
+
+function install () {
+  . ./install/install
+}
+
+function restart-k8s () {
+  . ./install/restart_k8s
+}
+
+function restart-model () {
+  . ./install/restart_model
+}
+
+if [ "$#" -lt 1 ]; then
+    echo "$# is Illegal number of parameters."
+    echo "Usage: . medical-insight params"
+    echo " * install"
+    echo " * restart-k8s : restart minikube & create cluster"
+    echo " * restart-model : redeploy ai model"
+	exec bash -li
+fi
+
+"$@"

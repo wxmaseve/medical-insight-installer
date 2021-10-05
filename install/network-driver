@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# network driver
+sudo dpkg -i /mnt/usb/medical-insight/1.network-driver/deb_files/*.deb
+sudo sh /mnt/usb/medical-insight/1.network-driver/r8125-9.005.06/autorun.sh
+
+device_name=$(ip addr | grep "2: enp" | awk '{print $2}')
+ip_addr=192.168.0.214/24
+gw_addr=192.168.0.1
+dns1=168.126.63.1
+dns2=8.8.8.8
+
+echo -e "network: \
+\n  version: 2 \
+\n  ethernets: \
+\n    $device_name \
+\n      addresses: [$ip_addr] \
+\n      gateway4: $gw_addr \
+\n      nameservers: \
+\n        addresses: [$dns1,$dns2] \
+\n      dhcp4: no" > /etc/netplan/00-installer-config.yaml
+sudo netplan apply
+ip addr
+
+# 의존성 문제 해결 : RTL8125 네트워크 드라이브 설치시 강제로 deb 파일들을 설치하여 조치함.
+sudo apt-get update
+sudo apt --fix-broken install -y
+sudo apt-get update
