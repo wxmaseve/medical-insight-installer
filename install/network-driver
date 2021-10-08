@@ -1,26 +1,59 @@
 #!/bin/bash
 
 # network driver
-sudo dpkg -i /mnt/usb/medical-insight/1.network-driver/deb_files/*.deb
-sudo sh /mnt/usb/medical-insight/1.network-driver/r8125-9.005.06/autorun.sh
+sudo dpkg -i $APP_HOME/network-driver/deb_files/*.deb
+sleep 3s
+sudo dpkg -i $APP_HOME/network-driver/deb_files/*.deb
+sleep 3s
+sudo dpkg -i $APP_HOME/network-driver/deb_files/*.deb
+sleep 3s
+sh $APP_HOME/network-driver/r8125-9.005.06/autorun.sh
+sleep 3s
 
 device_name=$(ip addr | grep "2: enp" | awk '{print $2}')
-ip_addr=192.168.0.214/24
+ip_addr=192.168.0.214
 gw_addr=192.168.0.1
 dns1=168.126.63.1
 dns2=8.8.8.8
 
+# fixed IP
 echo -e "network: \
 \n  version: 2 \
 \n  ethernets: \
 \n    $device_name \
-\n      addresses: [$ip_addr] \
+\n      addresses: [$ip_addr/24] \
 \n      gateway4: $gw_addr \
 \n      nameservers: \
 \n        addresses: [$dns1,$dns2] \
-\n      dhcp4: no" > /etc/netplan/00-installer-config.yaml
+\n      dhcp4: no" | sudo tee /etc/netplan/00-installer-config.yaml
+
+# floating IP
+# 사내와 같이 MAC주소로 IP를 할당하는 사이트가 있다면 이렇게 셋팅
+#echo -e "network: \
+#\n  version: 2 \
+#\n  ethernets: \
+#\n    $device_name \
+#\n      dhcp4: yes" > /etc/netplan/00-installer-config.yaml
+
 sudo netplan apply
-ip addr
+
+echo "========================================================================================================"
+echo "Please wait for network to be configured."
+echo "========================================================================================================"
+for x in {1..10} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s10 -w 80 > /dev/null
+
+if [ $(hostname -I | awk '{print $1}') == "$ip_addr" ]; then
+    echo "network configuration completed."
+    echo "--------------------------------------------------------------------------------------------------------"
+    ip addr | grep "2: enp" -A 5
+    echo "========================================================================================================"
+else
+    echo "Please check IP($ip_addr) again."
+    exec bash -li
+fi
 
 # 의존성 문제 해결 : RTL8125 네트워크 드라이브 설치시 강제로 deb 파일들을 설치하여 조치함.
 sudo apt-get update
