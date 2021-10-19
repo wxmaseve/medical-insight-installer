@@ -1,6 +1,0 @@
-#!/bin/bash
-
-# mount cifs on Hyper-V
-mkdir -p /mnt/usb/medical-insight
-echo -e "\n//192.168.1.2/medical-insight /mnt/usb/medical-insight cifs username=quest,iocharset=utf8" | sudo tee -a /etc/fstab
-mount -a
