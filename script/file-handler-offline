@@ -1,0 +1,45 @@
+#!/bin/bash
+
+USB_HOME=/mnt/usb/medical-insight
+
+function package-save() {
+  sudo rm -f ./packages/*
+  sudo cp /var/cache/apt/archives/*.deb $USB_HOME/offline-files/packages
+}
+
+function package-install() {
+  sudo apt-get update
+  sleep 3s
+  sudo dpkg -i $USB_HOME/offline-files/packages/*.deb
+  sleep 3s
+  sudo apt --fix-broken install -y
+}
+
+function docker-save() {
+  sudo rm -f $USB_HOME/offline-files/images/*
+
+  docker images | awk "NR>=2" | awk '{ print $1 ":" $2 " " $1 ":" $2 }' | \
+  awk -F " " '{ gsub(":<none>",""); gsub("/", "--", $1); sub(":", "__", $1); print "docker save -o ./images/" $1 ".tar " $2 }' | \
+  sudo tee $USB_HOME/offline-files/images/docker-save-cmd
+
+  $USB_HOME/offline-files/images/docker-save-cmd
+}
+
+function docker-load() {
+  ls -l $USB_HOME/offline-files/images/*.tar | awk '{ print "docker load -i " $9 }' | \
+  sudo tee $USB_HOME/offline-files/images/docker-load-cmd
+
+  $USB_HOME/offline-files/images/docker-load-cmd
+}
+
+if [ "$#" -lt 1 ]; then
+    echo "$# is Illegal number of parameters."
+    echo "Usage: ./file-handler-offline params"
+    echo " * package-save : save local deb files"
+    echo " * package-install : install linux packages using deb files"
+    echo " * docker-save : save local registry images to each tar archive files"
+    echo " * docker-load : load images from each tar archive files"
+    exec bash -li
+fi
+
+"$@"

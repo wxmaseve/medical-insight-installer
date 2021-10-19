@@ -1,0 +1,110 @@
+#!/bin/bash
+
+USB_HOME=/mnt/usb/medical-insight
+
+echo "========================================================================================================"
+echo "install network driver. it takes 1min."
+echo "========================================================================================================"
+# network driver
+sudo dpkg -i $USB_HOME/network-driver/deb_files/*.deb
+sleep 3s
+sudo sh $USB_HOME/network-driver/r8125-9.005.06/autorun.sh
+sleep 3s
+
+device_name=$(ip addr | grep "2: e" | awk '{print $2}')
+#ip_addr=192.168.0.214
+#gw_addr=192.168.0.1
+#dns1=168.126.63.1
+#dns2=8.8.8.8
+echo "========================================================================================================"
+echo "Enter your network configuration information."
+echo "========================================================================================================"
+while :
+do
+    echo "1 : fixed IP"
+    echo "2 : floating IP"
+    read -p "choose one type of IP what you are going to setup : " ip_type
+
+    if [ $ip_type -eq 1 ]; then
+        while :
+        do
+            read -p "IP address: " ip_addr
+            read -p "Gateway address: " gw_addr
+            read -p "DNS1: " dns1
+            read -p "DNS2: " dns2
+
+            echo -e "network: \
+            \n  ethernets: \
+            \n    $device_name \
+            \n      addresses: [$ip_addr/24] \
+            \n      gateway4: $gw_addr \
+            \n      nameservers: \
+            \n        addresses: [$dns1,$dns2] \
+            \n      dhcp4: no \
+            \n  version: 2\n"
+            read -p "is it right that you typed? (y/n)" yn
+
+            if [ $yn = "y" ] || [ $yn = "Y" ]; then
+                break;
+            fi
+        done
+
+        # fixed IP
+        echo -e "network: \
+        \n  ethernets: \
+        \n    $device_name \
+        \n      addresses: [$ip_addr/24] \
+        \n      gateway4: $gw_addr \
+        \n      nameservers: \
+        \n        addresses: [$dns1,$dns2] \
+        \n      dhcp4: no \
+        \n  version: 2" | sudo tee /etc/netplan/00-installer-config.yaml
+
+        sudo netplan apply
+
+        echo "========================================================================================================"
+        echo "Please wait for network to be configured."
+        echo "========================================================================================================"
+        sleep 15s
+
+        echo "*** check IP"
+        echo "netplan config yaml : $ip_addr"
+        echo "hostname -I : $(hostname -I | awk '{print $1}')"
+        sleep 5s
+
+        if [ $(hostname -I | awk '{print $1}') == "$ip_addr" ]; then
+            echo "network configuration completed."
+            echo "--------------------------------------------------------------------------------------------------------"
+            ip addr | grep "2: enp" -A 5
+            echo "========================================================================================================"
+        else
+            echo "Please check IP($ip_addr) again."
+            exec bash -li
+        fi
+
+        break;
+
+    elif [ $ip_type -eq 2 ]; then
+        # floating IP
+        # 사내와 같이 MAC주소로 IP를 할당하는 사이트가 있다면 이렇게 셋팅
+        echo -e "network: \
+        \n  ethernets: \
+        \n    $device_name \
+        \n      dhcp4: yes \
+        \n  version: 2" | sudo tee /etc/netplan/00-installer-config.yaml
+
+        sudo netplan apply
+
+        break;
+
+    else
+        echo "*** you should type 1 or 2."
+    fi
+done
+
+
+# 의존성 문제 해결 : RTL8125 네트워크 드라이브 설치시 강제로 deb 파일들을 설치하여 조치함.
+sudo apt-get update
+sleep 3s
+sudo apt --fix-broken install -y
+sleep 3s

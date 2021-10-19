@@ -1,0 +1,240 @@
+#!/bin/bash
+
+APP_HOME=/home/airuntime
+
+echo "========================================================================================================"
+echo "All Backend Servives are stopping."
+echo "--------------------------------------------------------------------------------------------------------"
+ps -ef | grep -v grep | grep "java -jar"
+ps -ef | grep -v grep | grep "main.py"
+echo "========================================================================================================"
+sleep 3s
+
+sudo systemctl stop airuntime-configserver.service
+sudo systemctl stop airuntime-gateway.service
+sudo systemctl stop airuntime-account.service
+sudo systemctl stop airuntime-core.service
+sudo systemctl stop airuntime-ifservice.service
+sudo systemctl stop airuntime-watcher.service
+
+echo "========================================================================================================"
+echo "All Backend Servives stopped."
+echo "--------------------------------------------------------------------------------------------------------"
+ps -ef | grep -v grep | grep "java -jar"
+ps -ef | grep -v grep | grep "main.py"
+echo "========================================================================================================"
+sleep 3s
+
+# minikube 시작
+echo "========================================================================================================"
+echo "Restarting minikube."
+echo "========================================================================================================"
+cd ~
+minikube stop && \
+minikube delete
+
+minikube start --kubernetes-version=v1.18.17 --driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost && \
+minikube status
+
+echo "========================================================================================================"
+echo "Creating minikube cluster. it takes 1 min."
+echo "========================================================================================================"
+for x in {1..60} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s60 -w 80 > /dev/null
+
+# cert mgr, istio
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
+istioctl install -y
+
+echo "========================================================================================================"
+echo "Deploying Cert-manager & Istio. it takes 30s."
+echo "========================================================================================================"
+for x in {1..30} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s30 -w 80 > /dev/null
+
+# initial data migration
+cat $APP_HOME/aiip-runtime/v1_airuntime_20210727_060001.sql | mysql -u airuntime --password='!skcc1234' airuntime
+
+echo "========================================================================================================"
+echo "Data migration completed."
+echo "========================================================================================================"
+sleep 3s
+
+# minikube로 구성된 K8S에 LoadBalancer 타입으로 서비스를 배포하면, External IP할당이 되지 않는다.
+# NodePort 타입으로 변경하여 해결.
+echo "========================================================================================================"
+echo "type of istio-ingressgateway changed."
+echo "========================================================================================================"
+kubectl -n istio-system get svc istio-ingressgateway
+kubectl -n istio-system get svc istio-ingressgateway -o yaml | sed "s/type: LoadBalancer/type: NodePort/g" | kubectl replace -f -
+echo "--------------------------------------------------------------------------------------------------------"
+kubectl -n istio-system get svc istio-ingressgateway
+echo "========================================================================================================"
+sleep 3s
+
+# setup ingress host, ip
+cp $APP_HOME/aiip-runtime/config/common-stg.yml /data/airuntime/config/
+sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /data/airuntime/config/common-stg.yml
+sed -i "s/99999/$(kubectl -n istio-system get svc istio-ingressgateway -o yaml | grep -B 2 'port: 80' | grep 'nodePort' | awk '{print $2}')/g" /data/airuntime/config/common-stg.yml
+
+# minikube는 api server 포트가 8443으로 되어 있어서 443 -> 8443 포트포워딩 필요
+sudo iptables -t nat -A OUTPUT -o lo -p tcp --dport 443 -j REDIRECT --to-port 8443
+
+# knative-serving
+kubectl apply -f $APP_HOME/kubernetes/knative-serving/serving-crds.yaml
+kubectl apply -f $APP_HOME/kubernetes/knative-serving/serving-core.yaml
+kubectl apply -f $APP_HOME/kubernetes/knative-serving/net-certmanager-release.yaml
+kubectl apply -f $APP_HOME/kubernetes/knative-serving/net-istio-release.yaml
+
+echo "========================================================================================================"
+echo "Deploying knative-serving. it takes 20s."
+echo "========================================================================================================"
+for x in {1..20} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s20 -w 80 > /dev/null
+
+# kfserving
+kubectl apply -f $APP_HOME/kubernetes/kfserving.yaml
+
+echo "========================================================================================================"
+echo "Deploying kfserving. it takes 20s."
+echo "========================================================================================================"
+for x in {1..20} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s20 -w 80 > /dev/null
+
+# knative와 kfserving 버전 호환 문제로 임시 조치
+kubectl -n kfserving-system get cm inferenceservice-config -o yaml | sed "s/cluster-local-gateway/knative-local-gateway/g" | kubectl replace -f -
+
+cp $APP_HOME/aiip-runtime/airuntime-watcher/nfs-pv.yml /data/airuntime/
+sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" /data/airuntime/nfs-pv.yml
+kubectl create namespace auto-create-26
+kubectl -n auto-create-26 apply -f /data/airuntime/nfs-pv.yml
+
+echo "========================================================================================================"
+echo "Creating pv. it takes 10s."
+echo "========================================================================================================"
+for x in {1..10} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s10 -w 80 > /dev/null
+
+echo "========================================================================================================"
+echo "AI Runtime Backend Servives are running."
+echo "--------------------------------------------------------------------------------------------------------"
+# backend svc run
+sudo systemctl start airuntime-configserver.service
+sleep 3s
+sudo systemctl start airuntime-gateway.service
+sudo systemctl start airuntime-account.service
+sudo systemctl start airuntime-core.service
+sudo systemctl start airuntime-ifservice.service
+
+ps -ef | grep -v grep | grep "java -jar"
+echo "========================================================================================================"
+echo "Waiting for 20s."
+echo "========================================================================================================"
+for x in {1..20} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s20 -w 80 > /dev/null
+
+# deploy
+# 연동 중지
+sudo systemctl stop airuntime-watcher.service
+cp $APP_HOME/aiip-runtime/config/watcher.conf $APP_HOME/aiip-runtime/airuntime-watcher/src/
+
+# 토큰발급
+ip_addr=$(hostname -I | awk '{print $1}')
+token=$(curl --location --request POST "http://$ip_addr:17000/api/auth/issueToken" \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "accessKey": "04f23bfa-80e0-4da9-a0e1-19e75ac87e48" 
+}' | jq '.token' | sed 's/"//g')
+echo ""
+
+sleep 3s
+
+# 기존 정보 삭제
+sed -i '/inferenceId/d' $APP_HOME/aiip-runtime/airuntime-watcher/src/watcher.conf
+
+# 모델 배포
+echo "inferenceId = $( \
+curl --location --request POST "http://$ip_addr:17000/api/core/models/deployment?account_id=26&account_id=26" \
+--header 'Content-Type: application/json' \
+--header "Authorization: $token" \
+--data-raw '{
+  "account_id": 26,
+  "description": "Brain Hemorrhage Detection Solution, SKH-BCH-001, v 2.0.0",
+  "metadata": {
+    "name": "skh-bch-001",
+    "k8s_ns_nm": "auto-create-26",
+    "concurrent": 1
+  },
+  "predictor": {
+    "type": "custom",
+    "minReplicas": 1,
+    "maxReplicas": 1,
+    "custom": {
+      "container": {
+        "image": "wxmaseve/skh-bch:0.0.1.onpremise-triage",
+        "resources": {
+          "limits": {
+            "cpu": 2,
+            "memory": 4,
+            "gpu": 0
+          },
+          "requests": {
+            "cpu": 2,
+            "memory": 4,
+            "gpu": 0
+          }
+        },
+        "optional_json": "{\n    \"env\": [{\n            \"name\": \"STORAGE_URI\",\n            \"value\": \"pvc://on-nfs-pvc\"\n        },\n        {\n            \"name\": \"MODEL_NAME\",\n            \"value\": \"skh-bch-001\"\n        }\n    ],\n    \"args\": [\n        \"--model_name=$(MODEL_NAME)\"\n    ]\n}"
+      }
+    }
+  }
+}' | jq '.data.service_id' | sed 's/"//g')" >> $APP_HOME/aiip-runtime/airuntime-watcher/src/watcher.conf
+
+
+curl --location --request DELETE "http://$ip_addr:17000/api/auth/cancellationToken" \
+--header 'Content-Type: application/json' \
+--header "Authorization: $token"
+
+echo ""
+echo "========================================================================================================"
+echo "Deploying AI Model(Brain Hemorrhage Detection Solution). it takes 2m."
+echo "========================================================================================================"
+for x in {1..120} ; do
+    sleep 1s
+    printf .
+done | pv -pt -i0.2 -s120 -w 80 > /dev/null
+
+
+# interface
+sed -i "s/192.168.1.31/$(hostname -I | awk '{print $1}')/g" $APP_HOME/aiip-runtime/airuntime-watcher/src/watcher.conf
+sudo systemctl start airuntime-watcher.service
+
+echo ""
+echo "========================================================================================================"
+echo "AI Runtime Watcher(Interface Module) is running."
+echo "--------------------------------------------------------------------------------------------------------"
+ps -ef | grep -v grep | grep "main.py"
+echo "--------------------------------------------------------------------------------------------------------"
+sleep 3s
+
+echo "Preparing Sample-Test..."
+echo "========================================================================================================"
+sleep 5s
+
+# TEST
+sudo cp -R $APP_HOME/test/1.2.410.2000010.82.220.12100424023 /data/pacs/input/
+sudo mv /data/pacs/input/1.2.410.2000010.82.220.12100424023 /data/pacs/input/RQ1.2.410.2000010.82.220.12100424023
+tail -f $APP_HOME/aiip-runtime/airuntime-watcher/logs/airuntime-watcher.log
+
