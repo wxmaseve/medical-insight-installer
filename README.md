@@ -6,16 +6,23 @@
 ## 설치 usb 구성
 ```
 usb
-  |-- Ubuntu-Server 20.04.2 LTS amd64 설치 파일
+  |-- Ubuntu-Server 20.04.3 LTS amd64 설치 파일
   |
   |-- medical-insight
-  |   |-- install : 설치 스크립트
-  |       |-- install
-  |       |-- restart_k8s
-  |       |-- restart_model
+  |
+  |   |-- medical-insight : 메인 쉘
+  |
+  |   |-- script : 설치 스크립트
+  |       |-- install : 설치 메인 스크립트
+  |       |-- file-handler-offline : 로컬 파일로 설치하기 위한 리눅스 패키지, 도커 이미지 파일들
+  |       |-- init : no passwd 설정
+  |       |-- network-driver
+  |       |-- restart_k8s : minikube 클러스터 재생성
+  |       |-- restart_model : AI모델 삭제 후 재배포
   |   |-- network-driver
-  |       |-- deb_files
-  |       |-- r8125-9.005.06
+  |       |-- deb_files : 네트워크 드라이버 설치를 위한 리눅스 패키지 파일
+  |       |-- r8125-9.005.06 : 네트워크 드라이버
+  |           |-- autorun.sh : 설치쉘
   |   |-- kubernetes
   |       |-- bin
   |       |-- knative-serving
@@ -39,7 +46,6 @@ usb
   |       |-- v1_airuntime_20210727_060001 : 초기 데이터 마이그레이션 스크립트
   |   |-- test
   |       |-- 1.2.410.2000010.82.220.12100424023 : test sample data
-  |   |-- medical-insight : 실행
 ```
 
 ## 설치
@@ -58,13 +64,7 @@ $ sudo mkdir -p /mnt/usb
 $ sudo mount -t ntfs-3g /dev/sda1 /mnt/usb
 ```
 
-##### 3. 고정IP 설정
-#####   : 고객사에서 제공하는 사전 발급된 IP 주소 편집
-```
-$ vi /mnt/usb/medical-insight/install/network-driver
-```
-
-##### 4. 설치 스크립트 실행
+##### 3. 설치 스크립트 실행
 ```
 $ cd /mnt/usb/medical-insight
 $ ./medical-insight install
