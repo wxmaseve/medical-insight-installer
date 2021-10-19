@@ -1,15 +1,15 @@
 #!/bin/bash
 
 function install () {
-  . ./install/install
+  . ./script/install
 }
 
 function restart-k8s () {
-  . ./install/restart_k8s
+  . ./script/restart_k8s
 }
 
 function restart-model () {
-  . ./install/restart_model
+  . ./script/restart_model
 }
 
 if [ "$#" -lt 1 ]; then
