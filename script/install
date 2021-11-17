@@ -7,11 +7,10 @@ APP_HOME=/home/airuntime
 echo '!skcc1234' | sudo -S $USB_HOME/script/init
 
 # network driver
-$USB_HOME/script/network-driver
+#$USB_HOME/script/network-driver
 
 # linux package install
 $USB_HOME/script/file-handler-offline package-install
-
 sleep 5s
 
 # 설치파일 복사
@@ -70,6 +69,8 @@ sleep 5s
 # install k9s, minikube, kubectl, istioctl
 sudo chmod +x $APP_HOME/kubernetes/bin/*
 sudo install $APP_HOME/kubernetes/bin/* /usr/local/bin/
+sudo cp -R $APP_HOME/kubernetes/.minikube $APP_HOME
+sudo chown -R airuntime:airuntime $APP_HOME/.minikube
 
 echo "========================================================================================================"
 echo "k9s minikube kubectl istioctl installed."
@@ -199,7 +200,9 @@ for x in {1..60} ; do
 done | pv -pt -i0.2 -s60 -w 80 > /dev/null
 
 # cert mgr, istio
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
+#kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
+kubectl apply -f $APP_HOME/kubernetes/cert-manager.yaml
+
 istioctl install -y
 
 echo "========================================================================================================"
