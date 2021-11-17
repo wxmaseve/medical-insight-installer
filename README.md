@@ -26,7 +26,12 @@ usb
   |   |-- kubernetes
   |       |-- bin
   |       |-- knative-serving
-  |       |-- kfserving
+  |           |-- serving-crds.yaml
+  |           |-- serving-core.yaml
+  |           |-- net-certmanager-release.yaml
+  |           |-- net-istio-release.yaml
+  |       |-- cert-manager.yaml
+  |       |-- kfserving.yaml
   |   |-- aiip-runtime
   |       |-- airuntime-account
   |           |-- bin
