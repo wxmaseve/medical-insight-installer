@@ -24,6 +24,7 @@ usb
   |       |-- r8125-9.005.06 : 네트워크 드라이버
   |           |-- autorun.sh : 설치쉘
   |   |-- kubernetes
+  |       |-- .minikube
   |       |-- bin
   |       |-- knative-serving
   |           |-- serving-crds.yaml
