@@ -45,7 +45,9 @@ for x in {1..60} ; do
 done | pv -pt -i0.2 -s60 -w 80 > /dev/null
 
 # cert mgr, istio
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
+#kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
+kubectl apply -f $APP_HOME/kubernetes/cert-manager.yaml
+
 istioctl install -y
 
 echo "========================================================================================================"
